@@ -1,4 +1,5 @@
-from pydantic import BaseModel, ConfigDict, EmailStr
+from typing import Annotated
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, AfterValidator
 from datetime import datetime
 
 
@@ -78,3 +79,12 @@ class Token(BaseModel):
 # Token payload (encoded data)
 class TokenPayload(BaseModel):
     sub: str | None = None
+
+
+# --- Query parameters ---
+
+# Filter parameters
+class FilterParam(BaseModel):
+    q: Annotated[str | None, AfterValidator(lambda q : q.strip())] = ""
+    limit: Annotated[int, Field(gt=0, le=100)] = 10
+    skip: Annotated[int, Field(ge=0)] = 0

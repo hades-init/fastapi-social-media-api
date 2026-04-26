@@ -1,5 +1,5 @@
-from typing import List
-from fastapi import APIRouter, Depends, status, HTTPException, Response
+from typing import Annotated, List
+from fastapi import APIRouter, Depends, status, HTTPException, Response, Query
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
@@ -34,9 +34,9 @@ def create_post(
 # Get all posts
 @router.get("/", response_model=List[schemas.PostPublic])
 def get_posts(
+    filter: Annotated[schemas.FilterParam, Query()],     # query params
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
-    q: str | None = "", limit: int = 10, skip: int = 0,     # query params
 ):
     # Select statement
 
@@ -48,9 +48,9 @@ def get_posts(
     stmt = (
         select(models.Post, func.count(models.Vote.post_id).label("votes"))
         .outerjoin(models.Vote)
-        .where(models.Post.title.icontains(q))
+        .where(models.Post.title.icontains(filter.q))
         .group_by(models.Post.id)
-        .limit(limit).offset(skip)
+        .limit(filter.limit).offset(filter.skip)
     )
 
     # Execute statement and retrieve results
