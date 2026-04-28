@@ -27,7 +27,7 @@ COPY . .
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev
 
-    
+
 
 # --------- Stage 2: Runtime ---------
 
@@ -35,11 +35,13 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 FROM python:3.12-slim-bookworm as runtime
 
 # Setup a non-root user
-RUN groupadd --system --gid 999 nonroot \
-    && useradd --system --gid 999 --uid 999 --create-home nonroot
+RUN groupadd appgroup && useradd -g appgroup -s /bin/bash -m appuser
+# which is equivalent to running,
+# RUN groupadd appgroup \
+    # && useradd --gid appgroup --shell /bin/bash --create-home appuser
 
 # Copy the resolved venv and the application code from the builder stage.
-COPY --from=builder --chown=nonroot:nonroot /app /app
+COPY --from=builder --chown=appuser:appgroup /app /app
 
 # Place executables in the environment at the front of the path
 #   PYTHONDONTWRITEBYTECODE=1 ->  don't write .pyc at runtime (we already did in builder)
@@ -50,7 +52,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PATH="/app/.venv/bin:$PATH"
 
 # Use the non-root user to run our application
-USER nonroot
+USER appuser
 
 # Use `/app` as the working directory
 WORKDIR /app
