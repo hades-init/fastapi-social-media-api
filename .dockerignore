@@ -1,0 +1,54 @@
+# Anything listed here is excluded from the Docker build context.
+# A small build context = faster builds, smaller images, fewer cache busts.
+
+# Git / VCS
+.git
+.gitignore
+
+# Python build/runtime junk
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Virtualenvs (must NOT leak into the image -- the builder stage creates a fresh one)
+.venv
+venv/
+env/
+
+# Environment files (secrets!) -- mount these at runtime via docker-compose / -e flags
+.env
+.env.*
+!.env.template
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+
+# Project-local scratch
+temp/
+notebooks/
+examples/
+.ipynb_checkpoints/
+
+# Docker artifacts (avoid recursive context)
+Dockerfile
+.dockerignore
+docker-compose.yaml
+docker-compose.yml
+
+# Docs / misc
+README.md
+*.md

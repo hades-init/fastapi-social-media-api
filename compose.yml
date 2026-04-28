@@ -1,0 +1,57 @@
+# Spin up two services: postgres database and the fastapi app, on a shared network.
+
+services:
+
+  postgres: 
+    image: postgres:16-bookworm
+    restart: unless-stopped
+    # Named volume to persist data on container restarts
+    volumes: 
+      - postgres-data:/var/lib/postgres/data
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    # Healthcheck so the `app` service can wait until postgres is actually
+    # accepting connections, not just "container started".
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+    # Only expose to host if you want to connect with a local psql/pgAdmin. Comment out in production.
+    ports:
+      - "5432:5432"
+  
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: fastapi-app:latest
+    restart: unless-stopped
+    depends-on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      # Override POSTGRES_SERVER so the app talks to the `postgres` service over the
+      # compose network, NOT to localhost (which inside the container is itself).
+      POSTGRES_SERVER: postgres
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health-check"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "127.0.0.1:8000:8000"
+    # Run alembic migrations on startup, then exec gunicorn.
+    # `exec` replaces the shell so signals (SIGTERM on `docker stop`) reach gunicorn.
+    command: >
+      sh -c "alembic upgrade head &&
+             exec gunicorn app.main:app -c gunicorn.conf.py"
+
+volumes:
+  postgres_data:
